@@ -282,7 +282,7 @@ function render() {
     const rows = qGrades.filter(g => g.subject === subject),
       sum = rows.reduce((total, grade) => total + Number(grade.score), 0),
       avg = average(rows),
-      future = QUARTERS.filter(q => q.id > displayQuarter() && !rows.some(g => Number(g.quarter) === q.id)),
+      future = QUARTERS.filter(q => q.id >= displayQuarter() && !rows.some(g => Number(g.quarter) === q.id)),
       required = Math.ceil(38 - sum),
       forecast = (sum + (4 - rows.length) * (avg ?? 0)) / 4,
       plan = Array(future.length).fill(10);
@@ -292,9 +292,17 @@ function render() {
       plan[i] -= cut;
       reduction -= cut;
     }
-    const advice = rows.length === 4 ? `Годовая: ${roundGrade(avg)} (${avg.toFixed(1)}).` : future.length === 0 ? `Прогноз: ${roundGrade(forecast)}.` : required <= 0 ? 'Для годовой 10 можно немного снизить темп.' : required > 10 * future.length ? 'Чтобы точнее рассчитать цель, добавь оценки за прошедшие четверти.' : `Для годовой 10: ${plan.map((score, i) => `${QUARTERS[QUARTERS.indexOf(future[i])].name.replace(' четверть', '')} — ${score}`).join(', ')}.`;
-    const progress = Math.max(0, Math.min(100, forecast * 10));
-    return `<div class="forecast-row"><div class="grade-card"><div class="grade-score">${roundGrade(forecast)}</div><div class="item-main"><strong>${esc(subject)}</strong><small>${esc(advice)}</small></div></div><div class="forecast-meter" role="img" aria-label="Прогноз ${forecast.toFixed(1)} из 10"><span style="width:${progress}%"></span><i></i></div></div>`
+    const canReach10 = required <= 10 * future.length;
+    const quarterTiles = QUARTERS.map(q => {
+      const saved = rows.find(g => Number(g.quarter) === q.id);
+      const plannedIndex = future.findIndex(f => f.id === q.id);
+      const planned = !saved && plannedIndex >= 0 && canReach10 ? plan[plannedIndex] : null;
+      const value = saved ? Number(saved.score) : planned;
+      const state = saved ? 'recorded' : planned !== null ? 'planned' : 'empty';
+      return `<div class="quarter-chip ${state}"><span>${q.name.split(' ')[0]}</span><strong>${value ?? '—'}</strong></div>`
+    }).join('');
+    const target = rows.length === 4 ? `Годовая оценка: ${roundGrade(avg)}.` : canReach10 ? `Для годовой 10 — ${plan.join(', ')} в следующих четвертях.` : 'Добавь оценки за прошедшие четверти для прогноза.';
+    return `<article class="forecast-row"><div class="forecast-head"><strong>${esc(subject)}</strong><span>${rows.length === 4 ? `Итог ${roundGrade(avg)}` : 'Цель 10'}</span></div><div class="quarter-track" aria-label="Оценки по четвертям">${quarterTiles}</div><p class="forecast-plan">${esc(target)}</p></article>`
   }).join('') || empty('Добавь четвертные оценки, и здесь появится прогноз годового результата и план до цели 10.');
   const subjects = [...new Set(data.grades.map(g => g.subject))];
   document.querySelector('#grades-list').innerHTML = subjects.length ? subjects.map(subject => {
