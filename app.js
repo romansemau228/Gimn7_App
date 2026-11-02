@@ -233,6 +233,16 @@ function displayQuarter() {
   return [...QUARTERS].reverse().find(q => date > q.end)?.id || QUARTERS[0].id
 }
 
+function isSchoolVacation() {
+  const now = new Date();
+  const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  if (QUARTERS.some(q => date >= q.start && date <= q.end)) return false;
+  return QUARTERS.some((q, i) => {
+    const nextStart = QUARTERS[i + 1]?.start || `${Number(q.start.slice(0, 4)) + 1}-09-01`;
+    return date > q.end && date < nextStart;
+  });
+}
+
 function empty(text) {
   return `<div class="empty-card">${text}</div>`
 }
@@ -243,6 +253,10 @@ function render() {
     next = (d + 1) % 6;
   document.querySelector('#today-date').textContent = `${DAY_SHORT[d]}, ${dateLabel(now)}`;
   const tomorrow = data.lessons.filter(x => x.day === next).sort((a, b) => a.time.localeCompare(b.time));
+  const vacation = isSchoolVacation();
+  document.querySelector('#today-status').hidden = !vacation;
+  document.querySelector('#schedule-holiday').hidden = !vacation;
+  document.querySelector('#schedule-content').hidden = vacation;
   const open = data.homework.filter(x => !x.done);
   const tips = [];
   for (const lesson of tomorrow) {
@@ -266,7 +280,7 @@ function render() {
   }
   document.querySelector('#suggestions').innerHTML = tips.length ? tips.slice(0, 3).map(t => `<div class="suggestion"><span class="suggestion-dot"></span><div><strong>${esc(t.title)}</strong><p>${esc(t.text)}</p></div></div>`).join('') : `<div class="empty-note"><span>✳</span><p>Добавь уроки и оценки — подскажу, что повторить перед занятиями.</p></div>`;
   const todayLessons = data.lessons.filter(x => x.day === d).sort((a, b) => a.time.localeCompare(b.time));
-  document.querySelector('#today-lessons').innerHTML = todayLessons.length ? todayLessons.map(lessonCard).join('') : empty('На сегодня уроки пока не добавлены.');
+  document.querySelector('#today-lessons').innerHTML = vacation ? '' : todayLessons.length ? todayLessons.map(lessonCard).join('') : empty('Уроки на сегодня не добавлены.');
   const soon = [...open].sort((a, b) => (a.due || '').localeCompare(b.due || '')).slice(0, 3);
   document.querySelector('#home-preview').innerHTML = soon.length ? soon.map(homeworkCard).join('') : empty('Новых заданий пока нет — хороший момент выдохнуть.');
   document.querySelector('#day-strip').innerHTML = DAY_SHORT.map((n, i) => `<button class="day-button ${i===selectedDay?'selected':''}" data-day="${i}"><span>${n}</span><strong>${DAYS[i].slice(0,2)}</strong></button>`).join('');
