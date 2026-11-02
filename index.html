@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f5f5f7">
+  <title>Школьный помощник</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar"><div><p class="eyebrow" id="today-label">ТВОЙ ШКОЛЬНЫЙ ДЕНЬ</p><h1>Привет! <span class="wave">✳</span></h1></div><div class="avatar">У</div></header>
+    <section class="hero"><div class="hero-copy"><span class="pill"><i></i> ТВОЙ ПЛАН НА СЕГОДНЯ</span><h2 id="hero-title">Давай разберёмся<br>с учебными делами</h2><p id="hero-subtitle">Добавь расписание и задания — я помогу ничего не забыть.</p></div><div class="hero-mark">✦</div></section>
+    <section class="summary-grid" aria-label="Сводка"><article class="summary-card"><span class="card-icon lilac">▦</span><span class="summary-label">УРОКОВ ЗАВТРА</span><strong id="tomorrow-count">—</strong><small id="tomorrow-caption">добавь расписание</small></article><article class="summary-card"><span class="card-icon peach">◷</span><span class="summary-label">ДОМАШНИХ ЗАДАНИЙ</span><strong id="homework-count">0</strong><small>ещё предстоит</small></article></section>
+    <section class="panel tip-panel"><div class="section-heading"><div><span class="section-kicker">УМНАЯ ПОДСКАЗКА</span><h3>Что повторить</h3></div><span class="sparkle">✧</span></div><div id="suggestions" class="suggestions"><div class="empty-note"><span>✳</span><p>Добавь уроки и оценки — подскажу, что повторить перед занятиями.</p></div></div></section>
+    <nav class="tabs" aria-label="Разделы"><button class="tab active" data-tab="home"><span>⌂</span>Главная</button><button class="tab" data-tab="schedule"><span>▦</span>Расписание</button><button class="tab" data-tab="grades"><span>◉</span>Оценки</button><button class="tab" data-tab="homework"><span>☷</span>Задания</button></nav>
+    <section class="view active" id="view-home"><div class="section-heading home-heading"><div><span class="section-kicker">СЛЕДИ ЗА РИТМОМ</span><h3>На сегодня</h3></div><button class="text-button" data-goto="schedule">Все уроки <span>→</span></button></div><div id="today-lessons" class="lesson-list"></div><div class="section-heading home-heading hw-heading"><div><span class="section-kicker">НЕ ЗАБУДЬ СДЕЛАТЬ</span><h3>Ближайшие задания</h3></div><button class="text-button" data-goto="homework">Все задания <span>→</span></button></div><div id="home-preview" class="lesson-list"></div></section>
+    <section class="view" id="view-schedule"><div class="section-heading view-heading"><div><span class="section-kicker">ТВОЯ НЕДЕЛЯ</span><h3>Расписание</h3></div><button class="primary-button" id="add-lesson">＋ Урок</button></div><div class="day-strip" id="day-strip"></div><div id="schedule-list" class="lesson-list"></div></section>
+    <section class="view" id="view-grades"><div class="section-heading view-heading"><div><span class="section-kicker">ТВОИ РЕЗУЛЬТАТЫ</span><h3>Оценки</h3></div><button class="primary-button" id="add-grade">＋ Оценка</button></div><div class="grade-overview"><div><span class="section-kicker">СРЕДНИЙ БАЛЛ ЗА ЧЕТВЕРТЬ</span><strong id="overall-average">—</strong></div><span class="grade-scale">из 10</span></div><div class="section-heading view-heading"><div><span class="section-kicker">ИТОГОВАЯ ОЦЕНКА</span><h3>Прогноз за год</h3></div><button class="primary-button" id="add-quarter-grade">＋ Четвертная</button></div><div id="annual-forecast" class="grade-list"></div><div class="section-heading view-heading" style="margin-top:22px"><div><span class="section-kicker">ТЕКУЩИЕ ОЦЕНКИ</span><h3>По предметам</h3></div></div><div id="grades-list" class="grade-list"></div></section>
+    <section class="view" id="view-homework"><div class="section-heading view-heading"><div><span class="section-kicker">ВСЁ ПОД КОНТРОЛЕМ</span><h3>Задания</h3></div><button class="primary-button" id="add-homework">＋ Задание</button></div><div class="filter-row"><button class="filter active" data-filter="active">Активные</button><button class="filter" data-filter="done">Готовые</button></div><div id="homework-list" class="lesson-list"></div></section>
+    <footer>Сделано для твоего спокойного учебного ритма <span>✳</span></footer>
+  </main>
+  <dialog id="entry-dialog"><form id="entry-form" method="dialog"><div class="dialog-head"><div><span class="section-kicker" id="dialog-kicker">ДОБАВИТЬ</span><h3 id="dialog-title">Новое</h3></div><button class="close-button" type="button" id="close-dialog" aria-label="Закрыть">×</button></div><div id="form-fields"></div><div class="dialog-actions"><button class="secondary-button" type="button" id="cancel-dialog">Отмена</button><button class="primary-button" type="submit">Сохранить</button></div></form></dialog>
+</body>
+</html>
