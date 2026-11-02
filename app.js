@@ -220,14 +220,17 @@ function roundGrade(value) {
 }
 
 function currentQuarter(row) {
-  if (row.quarter !== undefined) return Number(row.quarter) === activeQuarter();
+  if (row.quarter !== undefined) return Number(row.quarter) === displayQuarter();
   const q = QUARTERS.find(q => row.date >= q.start && row.date <= q.end);
-  return q?.id === activeQuarter()
+  return q?.id === displayQuarter()
 }
 
-function activeQuarter() {
-  const date = new Date().toISOString().slice(0, 10);
-  return QUARTERS.find(q => date >= q.start && date <= q.end)?.id || QUARTERS.find(q => date < q.start)?.id || 4
+function displayQuarter() {
+  const now = new Date();
+  const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const underway = QUARTERS.find(q => date >= q.start && date <= q.end);
+  if (underway) return underway.id;
+  return [...QUARTERS].reverse().find(q => date > q.end)?.id || QUARTERS[0].id
 }
 
 function empty(text) {
@@ -271,19 +274,27 @@ function render() {
   document.querySelector('#schedule-list').innerHTML = dayLessons.length ? dayLessons.map(lessonCard).join('') : empty('Для этого дня уроки ещё не добавлены.');
   const qGrades = data.quarterGrades || [],
     quarterGrades = qGrades.filter(currentQuarter),
-    allAvg = average(quarterGrades);
+    allAvg = average(quarterGrades),
+    shownQuarter = QUARTERS.find(q => q.id === displayQuarter());
+  document.querySelector('#quarter-result-title').textContent = `ИТОГ ${shownQuarter.name.toUpperCase()}`;
   document.querySelector('#overall-average').textContent = allAvg === null ? '—' : allAvg.toFixed(1);
   document.querySelector('#annual-forecast').innerHTML = [...new Set(qGrades.map(g => g.subject))].map(subject => {
     const rows = qGrades.filter(g => g.subject === subject),
-      done = rows.length,
-      avg = average(rows),
-      remain = 4 - done,
       sum = rows.reduce((total, grade) => total + Number(grade.score), 0),
-      needed = remain ? (38 - sum) / remain : 0,
-      forecast = remain ? (sum + remain * avg) / 4 : avg,
-      requiredSum = Math.ceil(38 - sum);
-    const advice = done === 4 ? `Среднее ${avg.toFixed(2)} → годовая ${roundGrade(avg)}.` : needed <= 0 ? `Среднее сейчас ${ (sum / 4).toFixed(2)}: цель 10 уже обеспечена.` : needed <= 10 ? `Чтобы среднее было не ниже 9,5 и округлилось до 10, набери не меньше ${requiredSum} баллов за ${remain} четверти (в среднем ${needed.toFixed(2)}).` : `Даже если получать по 10, среднее не достигнет 9,5; оценки 10 всё равно повысят годовой результат.`;
-    return `<div class="grade-card"><div class="grade-score">${roundGrade(forecast)}</div><div class="item-main"><strong>${esc(subject)}</strong><small>${done}/4 четвертей · прогнозное среднее ${forecast.toFixed(2)} · ${esc(advice)}</small></div></div>`
+      avg = average(rows),
+      future = QUARTERS.filter(q => q.id > displayQuarter() && !rows.some(g => Number(g.quarter) === q.id)),
+      required = Math.ceil(38 - sum),
+      forecast = (sum + (4 - rows.length) * (avg ?? 0)) / 4,
+      plan = Array(future.length).fill(10);
+    let reduction = 10 * future.length - required;
+    for (let i = 0; i < plan.length && reduction > 0; i++) {
+      const cut = Math.min(reduction, 9);
+      plan[i] -= cut;
+      reduction -= cut;
+    }
+    const advice = rows.length === 4 ? `Годовая: ${roundGrade(avg)} (${avg.toFixed(1)}).` : future.length === 0 ? `Прогноз: ${roundGrade(forecast)}.` : required <= 0 ? 'Для годовой 10 можно немного снизить темп.' : required > 10 * future.length ? 'Чтобы точнее рассчитать цель, добавь оценки за прошедшие четверти.' : `Для годовой 10: ${plan.map((score, i) => `${QUARTERS[QUARTERS.indexOf(future[i])].name.replace(' четверть', '')} — ${score}`).join(', ')}.`;
+    const progress = Math.max(0, Math.min(100, forecast * 10));
+    return `<div class="forecast-row"><div class="grade-card"><div class="grade-score">${roundGrade(forecast)}</div><div class="item-main"><strong>${esc(subject)}</strong><small>${esc(advice)}</small></div></div><div class="forecast-meter" role="img" aria-label="Прогноз ${forecast.toFixed(1)} из 10"><span style="width:${progress}%"></span><i></i></div></div>`
   }).join('') || empty('Добавь четвертные оценки, и здесь появится прогноз годового результата и план до цели 10.');
   const subjects = [...new Set(data.grades.map(g => g.subject))];
   document.querySelector('#grades-list').innerHTML = subjects.length ? subjects.map(subject => {
@@ -345,7 +356,7 @@ function openQuarterForm() {
   entryType = 'quarter';
   document.querySelector('#dialog-kicker').textContent = 'ИТОГ ЧЕТВЕРТИ';
   document.querySelector('#dialog-title').textContent = 'Добавить четвертную';
-  fields.innerHTML = `${subjectSelect()}<div class="field-grid"><label class="field"><span>Четверть</span><select name="quarter">${QUARTERS.map(q=>`<option value="${q.id}" ${q.id===activeQuarter()?'selected':''}>${q.name}</option>`).join('')}</select></label><label class="field"><span>Оценка (1–10)</span><input name="score" type="number" min="1" max="10" required></label></div>`;
+  fields.innerHTML = `${subjectSelect()}<div class="field-grid"><label class="field"><span>Четверть</span><select name="quarter">${QUARTERS.map(q=>`<option value="${q.id}" ${q.id===displayQuarter()?'selected':''}>${q.name}</option>`).join('')}</select></label><label class="field"><span>Оценка (1–10)</span><input name="score" type="number" min="1" max="10" required></label></div>`;
   dialog.showModal()
 }
 document.querySelector('#cancel-dialog').onclick = () => dialog.close();
