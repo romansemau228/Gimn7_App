@@ -215,6 +215,10 @@ function average(rows) {
   return rows.length ? rows.reduce((s, r) => s + Number(r.score), 0) / rows.length : null
 }
 
+function roundGrade(value) {
+  return Math.floor(value + 0.5)
+}
+
 function currentQuarter(row) {
   if (row.quarter !== undefined) return Number(row.quarter) === activeQuarter();
   const q = QUARTERS.find(q => row.date >= q.start && row.date <= q.end);
@@ -281,10 +285,12 @@ function render() {
       done = rows.length,
       avg = average(rows),
       remain = 4 - done,
-      needed = remain ? (40 - rows.reduce((a, g) => a + Number(g.score), 0)) / remain : 0,
-      forecast = remain ? (rows.reduce((a, g) => a + Number(g.score), 0) + remain * avg) / 4 : avg;
-    const advice = done === 4 ? `Годовая средняя: ${avg.toFixed(1)}.` : needed <= 0 ? 'Цель 10 уже обеспечена по среднему.' : needed <= 10 ? `Для среднего 10 нужны примерно ${needed.toFixed(1)} в каждой из ${remain} оставшихся четвертей.` : `Для среднего 10 нужны ${needed.toFixed(1)} в каждой четверти — цель недостижима только средним, но высокий результат улучшит итог.`;
-    return `<div class="grade-card"><div class="grade-score">${forecast.toFixed(1)}</div><div class="item-main"><strong>${esc(subject)}</strong><small>${done}/4 четвертей · ${esc(advice)}</small></div></div>`
+      sum = rows.reduce((total, grade) => total + Number(grade.score), 0),
+      needed = remain ? (38 - sum) / remain : 0,
+      forecast = remain ? (sum + remain * avg) / 4 : avg,
+      requiredSum = Math.ceil(38 - sum);
+    const advice = done === 4 ? `Среднее ${avg.toFixed(2)} → годовая ${roundGrade(avg)}.` : needed <= 0 ? `Среднее сейчас ${ (sum / 4).toFixed(2)}: цель 10 уже обеспечена.` : needed <= 10 ? `Чтобы среднее было не ниже 9,5 и округлилось до 10, набери не меньше ${requiredSum} баллов за ${remain} четверти (в среднем ${needed.toFixed(2)}).` : `Даже если получать по 10, среднее не достигнет 9,5; оценки 10 всё равно повысят годовой результат.`;
+    return `<div class="grade-card"><div class="grade-score">${roundGrade(forecast)}</div><div class="item-main"><strong>${esc(subject)}</strong><small>${done}/4 четвертей · прогнозное среднее ${forecast.toFixed(2)} · ${esc(advice)}</small></div></div>`
   }).join('') || empty('Добавь четвертные оценки, и здесь появится прогноз годового результата и план до цели 10.');
   const subjects = [...new Set(data.grades.map(g => g.subject))];
   document.querySelector('#grades-list').innerHTML = subjects.length ? subjects.map(subject => {
