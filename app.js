@@ -238,16 +238,9 @@ function render() {
   const now = new Date(),
     d = today(),
     next = (d + 1) % 6;
-  document.querySelector('#today-label').textContent = `${DAY_SHORT[d].toUpperCase()}, ${dateLabel(now).toUpperCase()}`;
+  document.querySelector('#today-date').textContent = `${DAY_SHORT[d]}, ${dateLabel(now)}`;
   const tomorrow = data.lessons.filter(x => x.day === next).sort((a, b) => a.time.localeCompare(b.time));
-  document.querySelector('#tomorrow-count').textContent = tomorrow.length || '—';
-  document.querySelector('#tomorrow-caption').textContent = tomorrow.length ? 'уроков в расписании' : 'добавь расписание';
   const open = data.homework.filter(x => !x.done);
-  document.querySelector('#homework-count').textContent = open.length;
-  if (tomorrow.length) {
-    document.querySelector('#hero-title').innerHTML = `Завтра — ${DAYS[next].toLowerCase()}<br>всё под контролем`;
-    document.querySelector('#hero-subtitle').textContent = `${tomorrow.length} ${plural(tomorrow.length,'урок','урока','уроков')} и ${open.length} ${plural(open.length,'задание','задания','заданий')} в списке.`
-  }
   const tips = [];
   for (const lesson of tomorrow) {
     const gs = data.grades.filter(g => g.subject.toLowerCase() === lesson.subject.toLowerCase()),
