@@ -57,5 +57,14 @@ document.querySelector('#entry-form').addEventListener('submit',e=>{e.preventDef
 document.querySelector('#day-strip').addEventListener('click',e=>{const b=e.target.closest('[data-day]');if(b){selectedDay=Number(b.dataset.day);render()}});
 document.querySelectorAll('.filter').forEach(b=>b.onclick=()=>{homeworkFilter=b.dataset.filter;document.querySelectorAll('.filter').forEach(x=>x.classList.toggle('active',x===b));render()});
 document.addEventListener('click',e=>{const b=e.target.closest('[data-done]');if(b){const item=data.homework.find(x=>x.id===b.dataset.done);if(item)item.done=!item.done;save()}});
-if(window.Telegram?.WebApp){const tg=window.Telegram.WebApp;tg.ready();tg.expand();document.documentElement.style.setProperty('--tg-bg',tg.themeParams.bg_color||'#f5f5f7');}
+let tg=null;
+if(window.Telegram?.WebApp){
+ tg=window.Telegram.WebApp;tg.ready();tg.expand();document.documentElement.style.setProperty('--tg-bg',tg.themeParams.bg_color||'#f5f5f7');
+ const shortcutButton=document.querySelector('#shortcut-button');
+ if(tg.isVersionAtLeast?.('8.0')&&typeof tg.checkHomeScreenStatus==='function'){
+  tg.checkHomeScreenStatus(status=>{shortcutButton.hidden=status==='added'||status==='unsupported'});
+  shortcutButton.addEventListener('click',()=>{if(typeof tg.addToHomeScreen==='function')tg.addToHomeScreen()});
+  tg.onEvent?.('homeScreenAdded',()=>{shortcutButton.hidden=true});
+ }else shortcutButton.hidden=true;
+}
 render();
