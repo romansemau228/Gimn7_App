@@ -23,6 +23,8 @@ const QUARTERS = [{
   end: '2027-05-25'
 }];
 const SUBJECTS = ['Допризывная подготовка/медицинская подготовка', 'Физика', 'Биология', 'Английский язык', 'География', 'История', 'Физическая культура и здоровье', 'Химия', 'Информатика', 'Белорусский язык', 'Русский язык', 'Русская литература', 'Белорусская литература', 'Математика', 'Астрономия'];
+const EXAM_SUBJECTS = ['Английский язык', 'Математика', 'Белорусский язык'];
+const EXAM_STAGES = [{ id: 'mock1', label: 'Пробник 1' }, { id: 'mock2', label: 'Пробник 2' }, { id: 'mock3', label: 'Пробник 3' }, { id: 'exam', label: 'Экзамен' }];
 const defaultData = {
   lessons: [{
     day: 0,
@@ -155,7 +157,8 @@ const defaultData = {
   }],
   grades: [],
   homework: [],
-  quarterGrades: []
+  quarterGrades: [],
+  examResults: []
 };
 let data = loadData(),
   selectedDay = today(),
@@ -324,6 +327,17 @@ function render() {
       qRows = rows.filter(currentQuarter);
     return `<div class="grade-card"><div class="grade-score">${Number(rows[0].score)}</div><div class="item-main"><strong>${esc(subject)}</strong><small>${qRows.length?`${qRows.length} ${plural(qRows.length,'оценка','оценки','оценок')} за четверть`:'Нет оценок в этой четверти'}${rows[0].note?' · '+esc(rows[0].note):''}</small></div><span class="subject-average">${qRows.length?average(qRows).toFixed(1):'—'} / 10</span></div>`
   }).join('') : empty('Оценок пока нет. Добавь первую — средний балл за четверть посчитается автоматически.');
+  document.querySelector('#exam-list').innerHTML = EXAM_SUBJECTS.map(subject => {
+    const slots = EXAM_STAGES.map(stage => {
+      const result = (data.examResults || []).find(x => x.subject === subject && x.stage === stage.id);
+      const percent = result && Number(result.maximum) > 0 ? Math.round(Number(result.score) / Number(result.maximum) * 100) : null;
+      return `<button class="exam-stage ${result ? 'has-result' : ''}" data-exam-subject="${esc(subject)}" data-exam-stage="${stage.id}"><span>${stage.label}</span><strong>${result ? `${esc(result.score)} / ${esc(result.maximum)}` : 'Добавить'}</strong>${result ? `<small>${percent}%${result.date ? ` · ${dateLabel(new Date(result.date + 'T12:00:00'))}` : ''}</small>` : '<small>баллы и максимум</small>'}</button>`
+    }).join('');
+    const results = EXAM_STAGES.map(stage => (data.examResults || []).find(x => x.subject === subject && x.stage === stage.id)).filter(Boolean);
+    const latest = results.length ? results[results.length - 1] : null;
+    const progress = latest && Number(latest.maximum) > 0 ? `${Math.round(Number(latest.score) / Number(latest.maximum) * 100)}% за последний результат` : 'Заполни результаты, чтобы видеть прогресс';
+    return `<article class="exam-card"><div class="exam-card-head"><div><strong>${esc(subject)}</strong><small>${progress}</small></div><span>${results.length} / 4</span></div><div class="exam-stages">${slots}</div></article>`
+  }).join('');
   const shown = data.homework.filter(x => homeworkFilter === 'done' ? x.done : !x.done).sort((a, b) => (a.due || '').localeCompare(b.due || ''));
   document.querySelector('#homework-list').innerHTML = shown.length ? shown.map(homeworkCard).join('') : empty(homeworkFilter === 'done' ? 'Готовые задания появятся здесь.' : 'Заданий нет — можно немного отдохнуть.');
 }
@@ -372,6 +386,10 @@ function activate(tab) {
 document.querySelector('#add-lesson').onclick = () => openForm('lesson');
 document.querySelector('#add-grade').onclick = () => openForm('grade');
 document.querySelector('#add-homework').onclick = () => openForm('homework');
+document.querySelector('#exam-list').addEventListener('click', e => {
+  const button = e.target.closest('[data-exam-stage]');
+  if (button) openExamForm(button.dataset.examSubject, button.dataset.examStage)
+});
 document.querySelector('#add-quarter-grade').onclick = () => openQuarterForm();
 
 function openQuarterForm() {
@@ -379,6 +397,17 @@ function openQuarterForm() {
   document.querySelector('#dialog-kicker').textContent = 'ИТОГ ЧЕТВЕРТИ';
   document.querySelector('#dialog-title').textContent = 'Добавить четвертную';
   fields.innerHTML = `${subjectSelect()}<div class="field-grid"><label class="field"><span>Четверть</span><select name="quarter">${QUARTERS.map(q=>`<option value="${q.id}" ${q.id===displayQuarter()?'selected':''}>${q.name}</option>`).join('')}</select></label><label class="field"><span>Оценка (1–10)</span><input name="score" type="number" min="1" max="10" required></label></div>`;
+  dialog.showModal()
+}
+function openExamForm(subject, stage) {
+  entryType = 'exam';
+  const previous = (data.examResults || []).find(x => x.subject === subject && x.stage === stage);
+  const label = EXAM_STAGES.find(x => x.id === stage)?.label || 'Результат';
+  document.querySelector('#dialog-kicker').textContent = 'ПРОБНИКИ И ЭКЗАМЕНЫ';
+  document.querySelector('#dialog-title').textContent = `${subject} · ${label}`;
+  fields.innerHTML = `<div class="field-grid"><label class="field"><span>Баллы</span><input name="score" type="number" min="0" step="any" value="${previous ? esc(previous.score) : ''}" required></label><label class="field"><span>Максимум баллов</span><input name="maximum" type="number" min="0.01" step="any" value="${previous ? esc(previous.maximum) : ''}" required></label></div><div class="field-grid"><label class="field"><span>Дата</span><input name="date" type="date" value="${previous?.date || new Date().toISOString().slice(0,10)}" required></label><label class="field"><span>Комментарий</span><input name="note" value="${previous ? esc(previous.note || '') : ''}" placeholder="Что получилось или повторить"></label></div>`;
+  dialog.dataset.examSubject = subject;
+  dialog.dataset.examStage = stage;
   dialog.showModal()
 }
 document.querySelector('#cancel-dialog').onclick = () => dialog.close();
@@ -411,6 +440,12 @@ document.querySelector('#entry-form').addEventListener('submit', e => {
     done: false,
     id: crypto.randomUUID()
   });
+  if (entryType === 'exam') {
+    const subject = dialog.dataset.examSubject, stage = dialog.dataset.examStage;
+    data.examResults ??= [];
+    data.examResults = data.examResults.filter(x => !(x.subject === subject && x.stage === stage));
+    data.examResults.push({ ...f, subject, stage, score: Number(f.score), maximum: Number(f.maximum), id: crypto.randomUUID() });
+  }
   save();
   dialog.close()
 });
